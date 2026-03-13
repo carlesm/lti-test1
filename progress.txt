@@ -1,3 +1,17 @@
+## 2026-03-13 - US-011
+- What was implemented:
+  - Added `{% block extra_scripts %}{% endblock %}` to `templates/base.html` before `</body>` for page-specific JS
+  - Updated `student_view` in `projects/views.py` (phase open): fetches enrollment, existing Preference, builds `ranked_projects` (existing order) + `unranked_projects` (not yet ranked), passes all to template
+  - Rewrote `templates/projects/student_view.html` (phase open section): added "Rank Your Projects" card with SortableJS drag list; pre-populated with saved preferences; on form submit JS populates hidden `project_ids` inputs in current order; POSTs to `/student/preferences/`
+  - SortableJS included via CDN in `extra_scripts` block (only rendered when phase is open)
+  - Success message comes from `messages.success` in `submit_preferences` view — displayed by base template messages block
+- Files changed: templates/base.html, projects/views.py, templates/projects/student_view.html
+- **Learnings for future iterations:**
+  - `enrollment.preference.ordered_project_ids` raises `Preference.DoesNotExist` if no record — wrap in try/except
+  - SortableJS form submission pattern: use JS `submit` event listener to build hidden inputs from sorted `li` elements
+  - `{% block extra_scripts %}{% endblock %}` in base.html allows page-specific script injection without polluting every page
+---
+
 ## 2026-03-13 - US-010
 - What was implemented:
   - Added `submit_preferences` view in `projects/views.py`: POST /student/preferences/
