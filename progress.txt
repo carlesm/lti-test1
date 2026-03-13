@@ -9,6 +9,18 @@
 
 ---
 
+## 2026-03-13 - US-005
+- What was implemented:
+  - Updated `professor_dashboard` view: Instructor role check, fetches Course from session context_id, passes course + projects to template
+  - Rewrote `templates/projects/professor_dashboard.html`: shows course title + phase badge, project cards with title/description/tags, empty state message when no projects
+- Files changed: projects/views.py, templates/projects/professor_dashboard.html
+- **Learnings for future iterations:**
+  - Phase badge styling: use Bootstrap bg-* classes conditional on `course.phase` value
+  - `course.projects.filter(is_deleted=False)` is the correct queryset for active projects
+  - INSTRUCTOR_ROLE and session key constants are exported from `projects/lti_views.py`
+  - Template uses `course.get_phase_display` for human-readable phase name
+---
+
 ## 2026-03-13 - US-004
 - What was implemented:
   - Updated `projects/lti_views.py`: full `handle_resource_launch` implementation — extracts sub, name, roles, context_id, context_title, lineitem_url from LTI claims; stores in Django session; creates/updates Course; creates StudentEnrollment for Learners; redirects to professor or student view
