@@ -16,6 +16,7 @@ urlpatterns = [
     path("professor/extend-deadline/", views.extend_deadline_view, name="extend_deadline"),
     path("professor/run-assignment/", views.run_assignment_view, name="run_assignment"),
     path("professor/assignments/", views.assignment_results_view, name="assignment_results"),
+    path("professor/assignments/<int:enrollment_id>/override/", views.override_assignment_view, name="override_assignment"),
     path("professor/publish/", views.publish_results_view, name="publish_results"),
     path("student/", views.student_view, name="student_view"),
     path("student/preferences/", views.submit_preferences, name="submit_preferences"),

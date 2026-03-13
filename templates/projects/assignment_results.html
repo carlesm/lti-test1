@@ -13,15 +13,17 @@
   </form>
 </div>
 
-<table class="table table-bordered table-hover">
+<table class="table table-bordered table-hover align-middle">
   <thead class="table-dark">
     <tr>
       <th>Student Name</th>
       <th>Assigned Project</th>
+      <th style="width:130px">Action</th>
     </tr>
   </thead>
   <tbody>
-    {% for assignment in assignments %}
+    {% for row in assignments_data %}
+    {% with assignment=row.assignment available=row.available_projects %}
     <tr>
       <td>{{ assignment.enrollment.name }}</td>
       <td>
@@ -31,10 +33,35 @@
           <span class="text-muted">Unassigned</span>
         {% endif %}
       </td>
+      <td>
+        <button class="btn btn-sm btn-outline-secondary"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#override-{{ assignment.enrollment.pk }}"
+                aria-expanded="false">
+          Override
+        </button>
+      </td>
     </tr>
+    <tr class="collapse" id="override-{{ assignment.enrollment.pk }}">
+      <td colspan="3" class="bg-light">
+        <form method="post" action="{% url 'projects:override_assignment' assignment.enrollment.pk %}" class="d-flex align-items-center gap-2 p-1">
+          {% csrf_token %}
+          <label class="form-label mb-0 fw-semibold">New assignment:</label>
+          <select name="project_id" class="form-select form-select-sm" style="max-width:300px">
+            <option value="unassigned"{% if not assignment.project %} selected{% endif %}>— Unassigned —</option>
+            {% for project in available %}
+            <option value="{{ project.pk }}"{% if assignment.project.pk == project.pk %} selected{% endif %}>{{ project.title }}</option>
+            {% endfor %}
+          </select>
+          <button type="submit" class="btn btn-sm btn-primary">Save</button>
+        </form>
+      </td>
+    </tr>
+    {% endwith %}
     {% empty %}
     <tr>
-      <td colspan="2" class="text-center text-muted">No assignments yet.</td>
+      <td colspan="3" class="text-center text-muted">No assignments yet.</td>
     </tr>
     {% endfor %}
   </tbody>

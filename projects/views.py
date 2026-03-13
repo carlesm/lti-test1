@@ -203,12 +203,53 @@ def assignment_results_view(request: HttpRequest) -> HttpResponse:
         return err
     if course.phase != Course.PHASE_ASSIGNED:
         return redirect("projects:professor_dashboard")
-    assignments = (
+    assignments = list(
         Assignment.objects.filter(enrollment__course=course)
         .select_related("enrollment", "project")
         .order_by("enrollment__name")
     )
-    return render(request, "projects/assignment_results.html", {"course": course, "assignments": assignments})
+    all_projects = list(course.projects.filter(is_deleted=False))
+    all_assigned_ids = {a.project_id for a in assignments if a.project_id is not None}
+
+    assignments_data = []
+    for a in assignments:
+        taken_by_others = all_assigned_ids - ({a.project_id} if a.project_id else set())
+        available = [p for p in all_projects if p.pk not in taken_by_others]
+        assignments_data.append({"assignment": a, "available_projects": available})
+
+    return render(
+        request,
+        "projects/assignment_results.html",
+        {"course": course, "assignments_data": assignments_data},
+    )
+
+
+@lti_required
+def override_assignment_view(request: HttpRequest, enrollment_id: int) -> HttpResponse:
+    """POST: override a student's assignment. Returns 403 if phase is not 'assigned'."""
+    course, err = _get_instructor_course(request)
+    if err:
+        return err
+    if course.phase != Course.PHASE_ASSIGNED:
+        return HttpResponseForbidden("Overrides only allowed during 'assigned' phase.")
+    if request.method != "POST":
+        return redirect("projects:assignment_results")
+
+    enrollment = get_object_or_404(StudentEnrollment, pk=enrollment_id, course=course)
+    assignment = get_object_or_404(Assignment, enrollment=enrollment)
+
+    new_project_id_raw = request.POST.get("project_id", "")
+    if new_project_id_raw == "" or new_project_id_raw == "unassigned":
+        new_project: Project | None = None
+    else:
+        try:
+            new_project = get_object_or_404(Project, pk=int(new_project_id_raw), course=course, is_deleted=False)
+        except (ValueError, TypeError):
+            return HttpResponseBadRequest("Invalid project ID.")
+
+    assignment.project = new_project
+    assignment.save(update_fields=["project"])
+    return redirect("projects:assignment_results")
 
 
 @lti_required
