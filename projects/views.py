@@ -197,11 +197,18 @@ def extend_deadline_view(request: HttpRequest) -> HttpResponse:
 
 @lti_required
 def assignment_results_view(request: HttpRequest) -> HttpResponse:
-    """Assignment results page — stub; full implementation in US-013."""
+    """Assignment results page — shows table of student assignments."""
     course, err = _get_instructor_course(request)
     if err:
         return err
-    return render(request, "projects/assignment_results.html", {"course": course})
+    if course.phase != Course.PHASE_ASSIGNED:
+        return redirect("projects:professor_dashboard")
+    assignments = (
+        Assignment.objects.filter(enrollment__course=course)
+        .select_related("enrollment", "project")
+        .order_by("enrollment__name")
+    )
+    return render(request, "projects/assignment_results.html", {"course": course, "assignments": assignments})
 
 
 @lti_required

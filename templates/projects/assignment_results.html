@@ -1,7 +1,47 @@
 {% extends "base.html" %}
 {% block title %}Assignment Results — {{ course.title }}{% endblock %}
 {% block content %}
-<h1>Assignment Results</h1>
-<p class="text-muted">Assignment algorithm not yet implemented.</p>
-<a href="{% url 'projects:professor_dashboard' %}" class="btn btn-secondary">Back to Dashboard</a>
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1>Assignment Results</h1>
+  <span class="badge bg-warning text-dark fs-6">{{ course.get_phase_display }}</span>
+</div>
+
+<div class="mb-3 d-flex gap-2">
+  <form method="post" action="{% url 'projects:run_assignment' %}">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-secondary">Re-run Assignment</button>
+  </form>
+</div>
+
+<table class="table table-bordered table-hover">
+  <thead class="table-dark">
+    <tr>
+      <th>Student Name</th>
+      <th>Assigned Project</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for assignment in assignments %}
+    <tr>
+      <td>{{ assignment.enrollment.name }}</td>
+      <td>
+        {% if assignment.project %}
+          {{ assignment.project.title }}
+        {% else %}
+          <span class="text-muted">Unassigned</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% empty %}
+    <tr>
+      <td colspan="2" class="text-center text-muted">No assignments yet.</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<form method="post" action="{% url 'projects:publish_results' %}">
+  {% csrf_token %}
+  <button type="submit" class="btn btn-success btn-lg">Publish Results</button>
+</form>
 {% endblock %}
