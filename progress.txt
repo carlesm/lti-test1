@@ -1,3 +1,36 @@
+## 2026-03-13 - US-010
+- What was implemented:
+  - Added `submit_preferences` view in `projects/views.py`: POST /student/preferences/
+  - Phase validation: returns 400 if phase is not 'open'
+  - Project PK validation: all submitted PKs must belong to the current course
+  - Count validation: at least 3 ranked if >3 projects exist, otherwise all projects must be ranked
+  - Creates or updates `Preference` record via `update_or_create`
+  - Uses `messages.success` for confirmation message, redirects to student_view
+  - Added URL pattern `student/preferences/` in `projects/urls.py`
+- Files changed: projects/views.py, projects/urls.py
+- **Learnings for future iterations:**
+  - Preference form data uses `request.POST.getlist("project_ids")` to receive multiple values
+  - `Preference.objects.update_or_create(enrollment=enrollment, defaults={...})` is the correct pattern for one-per-enrollment records
+  - Messages framework is available (django.contrib.messages configured in settings); use `messages.success(request, "...")` + display in template
+---
+
+## 2026-03-13 - US-009
+- What was implemented:
+  - Updated `student_view` in `projects/views.py`: Learner role check, phase-based routing
+    - setup/closed → "Selection is not open yet." message
+    - open → project cards with Available/Taken badges (Taken = appears in any Assignment for course)
+    - assigned → "Assignments are being finalized." message
+    - published → redirect to student_result view
+  - Added stub `student_result` view and URL `/student/result/` (full implementation US-016)
+  - Rewrote `templates/projects/student_view.html` with phase-aware content
+  - Created stub `templates/projects/student_result.html`
+- Files changed: projects/views.py, projects/urls.py, templates/projects/student_view.html, templates/projects/student_result.html (new)
+- **Learnings for future iterations:**
+  - Taken project check: `Assignment.objects.filter(enrollment__course=course, project__isnull=False).values_list("project_id", flat=True)` — use a set for O(1) lookup
+  - `course.refresh_from_db()` after middleware to get up-to-date phase (deadline auto-close)
+  - LEARNER_ROLE is exported from `projects/lti_views.py` alongside INSTRUCTOR_ROLE
+---
+
 ## 2026-03-13 - US-008
 - What was implemented:
   - Added `open_selection_view`, `close_selection_view`, `extend_deadline_view` POST views in `projects/views.py` calling service functions
