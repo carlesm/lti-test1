@@ -404,10 +404,28 @@ def submit_preferences(request: HttpRequest) -> HttpResponse:
 
 @lti_required
 def student_result(request: HttpRequest) -> HttpResponse:
-    """Student result view — stub; full implementation in US-016."""
+    """Student published result view (US-016)."""
     roles = request.session.get(LTI_ROLES_KEY, [])
     if LEARNER_ROLE not in roles:
         return HttpResponseForbidden("Learner role required.")
     context_id = request.session[LTI_CONTEXT_ID_KEY]
     course = Course.objects.get(context_id=context_id)
-    return render(request, "projects/student_result.html", {"course": course})
+
+    if course.phase != Course.PHASE_PUBLISHED:
+        return redirect("projects:student_view")
+
+    lti_sub = request.session[LTI_SUB_KEY]
+    try:
+        enrollment = StudentEnrollment.objects.get(course=course, lti_sub=lti_sub)
+    except StudentEnrollment.DoesNotExist:
+        return HttpResponseForbidden("Enrollment not found.")
+
+    try:
+        assignment = Assignment.objects.select_related("project").get(enrollment=enrollment)
+    except Assignment.DoesNotExist:
+        assignment = None
+
+    return render(request, "projects/student_result.html", {
+        "course": course,
+        "assignment": assignment,
+    })
