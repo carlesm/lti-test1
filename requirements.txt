@@ -1,0 +1,6 @@
+django>=5.0
+django-lti>=0.5
+psycopg2-binary
+gunicorn
+whitenoise
+dj-database-url
