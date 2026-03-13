@@ -1,3 +1,18 @@
+## 2026-03-13 - US-008
+- What was implemented:
+  - Added `open_selection_view`, `close_selection_view`, `extend_deadline_view` POST views in `projects/views.py` calling service functions
+  - Added stub `run_assignment_view`, `assignment_results_view`, `publish_results_view` (stubs for US-012/013/015)
+  - Added `_parse_deadline` helper: parses `datetime-local` input string (format `%Y-%m-%dT%H:%M`) into timezone-aware datetime
+  - Added URL patterns for all new views in `projects/urls.py`
+  - Updated `templates/projects/professor_dashboard.html`: phase action panel with conditional buttons per phase
+  - Created stub `templates/projects/assignment_results.html`
+- Files changed: projects/views.py, projects/urls.py, templates/projects/professor_dashboard.html, templates/projects/assignment_results.html (new)
+- **Learnings for future iterations:**
+  - HTML `datetime-local` inputs submit format `YYYY-MM-DDTHH:MM`; use `datetime.strptime(value, "%Y-%m-%dT%H:%M")` then `timezone.make_aware()`
+  - Stub views for future stories should redirect to dashboard or render a minimal stub template — avoids broken template URL tag errors
+  - Phase action panel is inside its own `.card` above the projects section
+---
+
 ## Codebase Patterns
 - Service functions in `projects/services.py` raise `ValueError` for invalid phase transitions
 - `AutoCloseDeadlineMiddleware` checks deadline on each request — no Celery needed
