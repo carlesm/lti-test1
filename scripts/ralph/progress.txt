@@ -1,0 +1,34 @@
+## Codebase Patterns
+- Use `uv run python manage.py ...` instead of `python manage.py ...` (uv-managed environment)
+- Django project name: `lti_project_selection`; main app: `projects`
+- Settings reads SECRET_KEY, DATABASE_URL, ALLOWED_HOSTS from env; SQLite fallback for dev
+- WhiteNoise is configured for static files (both INSTALLED_APPS and MIDDLEWARE)
+- Templates live in `BASE_DIR / 'templates'`; base.html uses Bootstrap 5.3.3 CDN
+- No type checker (mypy/ty) installed; typecheck = `uv run python -m py_compile <files>` + `manage.py check`
+
+# Ralph Progress Log
+Started: divendres, 13 de març de 2026, 10:28:11 CET
+---
+
+## 2026-03-13 - US-001
+- Created Django project scaffold with `lti_project_selection` project and `projects` app
+- Files created: manage.py, requirements.txt, .gitignore, lti_project_selection/{__init__,settings,urls,wsgi,asgi}.py, projects/{__init__,admin,apps,models,views,urls}.py, projects/migrations/__init__.py, templates/base.html
+- `python manage.py check` passes with 0 issues
+- **Learnings for future iterations:**
+  - Run commands with `uv run python manage.py ...`
+  - Django version installed is 6.0.3 (satisfies >=5.0), django-lti 0.9.2
+  - `dj_database_url` is used for DATABASE_URL parsing; included in requirements.txt
+  - `whitenoise.runserver_nostatic` must come BEFORE django.contrib.staticfiles in INSTALLED_APPS
+---
+
+## 2026-03-13 - US-002
+- Created all core models in projects/models.py: Course, Project, StudentEnrollment, Preference, Assignment
+- Registered all models in projects/admin.py
+- Generated and applied migration projects/migrations/0001_initial.py
+- `python manage.py migrate` and `manage.py check` both pass cleanly
+- **Learnings for future iterations:**
+  - No mypy/ty installed; type checking is just `py_compile` + `manage.py check`
+  - Course.phase uses string choices (setup/open/closed/assigned/published); constants defined on the model class
+  - Preference uses OneToOneField to enrollment (one preference set per student per course)
+  - Assignment uses OneToOneField to enrollment; project is nullable (None = Unassigned)
+---

@@ -1,0 +1,298 @@
+{
+  "project": "LTI Project Selection",
+  "branchName": "ralph/lti-project-selection",
+  "description": "LTI 1.3 compliant Django app where professors propose projects and students submit ranked preferences; assignments are made by algorithm with professor override, and results are published back to the LMS via AGS.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Django project scaffold",
+      "description": "As a developer, I need a working Django project structure so that subsequent stories have a foundation to build on.",
+      "acceptanceCriteria": [
+        "Django 5.x project created with a single app named 'projects'",
+        "requirements.txt includes: django, django-lti, psycopg2-binary, gunicorn, whitenoise",
+        "settings.py reads SECRET_KEY, DATABASE_URL, ALLOWED_HOSTS from environment variables",
+        "settings.py configures PostgreSQL as the default database",
+        "A base HTML template using Bootstrap 5 CDN is present",
+        "Running 'python manage.py check' produces no errors",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Database models and migrations",
+      "description": "As a developer, I need database models for all core entities so that data can be persisted.",
+      "acceptanceCriteria": [
+        "Course model: context_id (unique), title, phase (choices: setup/open/closed/assigned/published, default setup), deadline (nullable datetime), lineitem_url (nullable)",
+        "Project model: course (FK), title, description, tags (optional text), is_deleted (bool default False)",
+        "StudentEnrollment model: course (FK), lti_sub (the LTI sub claim), name (display name) — unique together (course, lti_sub)",
+        "Preference model: enrollment (FK), ordered_project_ids (JSON array of project PKs) — one per enrollment",
+        "Assignment model: enrollment (OneToOne), project (FK to Project, nullable) — null means Unassigned",
+        "Migrations generated and apply cleanly with 'python manage.py migrate'",
+        "All models registered in Django admin",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "LTI 1.3 endpoints and platform configuration",
+      "description": "As an LMS administrator, I want to register the tool in the LMS so that professors and students can launch it.",
+      "acceptanceCriteria": [
+        "django-lti is installed and added to INSTALLED_APPS",
+        "LTI urls are included in urls.py (OIDC login initiation, launch redirect, JWKS endpoint)",
+        "JWKS endpoint returns the tool's public key at /.well-known/jwks.json",
+        "A Platform record can be created via Django admin with: issuer, client_id, auth_login_url, auth_token_url, key_set_url",
+        "django-lti cache/nonce backend configured (database cache)",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "LTI launch handler with role detection and session",
+      "description": "As a developer, I need the LTI launch to identify the user role and store context in the session so that subsequent views know who the user is.",
+      "acceptanceCriteria": [
+        "A launch view handles the LTI 1.3 resource link launch message",
+        "On launch, the LTI claims (sub, name, roles, context_id, context_title, lineitem) are stored in the Django session",
+        "A Course record is auto-created if one does not exist for the context_id; lineitem_url and title are updated on each launch",
+        "A StudentEnrollment record is auto-created for Learner role users (sub + course)",
+        "Users with Instructor role are redirected to the professor dashboard",
+        "Users with Learner role are redirected to the student view",
+        "A decorator or mixin 'lti_required' raises 403 if no valid LTI session exists",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Professor dashboard shell",
+      "description": "As a professor, I want to see a course dashboard when I launch the tool so I can manage the project selection process.",
+      "acceptanceCriteria": [
+        "GET /professor/ renders a dashboard page (requires lti_required + Instructor role)",
+        "Dashboard shows course title and current phase badge",
+        "Dashboard shows the list of projects for the course (title, description, tags)",
+        "If no projects exist, an empty state message is shown",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Project CRUD for professors",
+      "description": "As a professor, I want to create, edit, and delete projects so that students have a list to choose from.",
+      "acceptanceCriteria": [
+        "Professor can create a project via a form (title required, description required, tags optional)",
+        "Professor can edit a project's title, description, and tags when phase is 'setup'",
+        "Professor can delete a project when phase is 'setup'; the project is removed from the list",
+        "Attempting to delete a project when phase is 'open' or later returns an error message: 'Cannot delete projects after selection has opened'",
+        "All project views are scoped to the current course (context_id from session)",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Phase transition backend (open, close, deadline, extend)",
+      "description": "As a developer, I need backend logic to manage course phase transitions so that the workflow is enforced correctly.",
+      "acceptanceCriteria": [
+        "A service function open_selection(course) transitions phase setup→open; raises ValueError if already past setup",
+        "A service function close_selection(course) transitions phase open→closed; raises ValueError if not open",
+        "Course.deadline field is set when opening with a deadline; a Django management command or Celery-free approach (checked on each request) auto-closes when deadline has passed",
+        "A service function extend_deadline(course, new_deadline) updates the deadline when phase is 'open'; raises ValueError if phase is not open",
+        "Phase transitions are enforced: no backward transitions allowed",
+        "Typecheck passes"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Phase transition UI on professor dashboard",
+      "description": "As a professor, I want action buttons on the dashboard that reflect the current phase so I can advance the workflow.",
+      "acceptanceCriteria": [
+        "When phase is 'setup': show 'Open Selection' button with optional deadline datetime input",
+        "When phase is 'open': show 'Close Selection' button and 'Extend Deadline' input (datetime) + submit button",
+        "When phase is 'closed': show 'Run Assignment' button (links to assignment view)",
+        "When phase is 'assigned': show 'Publish Results' button",
+        "When phase is 'published': show a 'Results Published' status message, no further action buttons",
+        "Each button POSTs to the appropriate endpoint and redirects back to the dashboard",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "Student project list view",
+      "description": "As a student, I want to browse the list of available projects so I can make an informed ranking.",
+      "acceptanceCriteria": [
+        "GET /student/ renders project list (requires lti_required + Learner role)",
+        "If phase is 'setup' or 'closed': show message 'Selection is not open yet'",
+        "If phase is 'open': show all projects as cards with title, description, and status badge (Available or Taken)",
+        "A project is 'Taken' if it appears in any Assignment record for this course",
+        "If phase is 'assigned': show message 'Assignments are being finalized'",
+        "If phase is 'published': redirect to student result view (US-016)",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Preference submission backend",
+      "description": "As a developer, I need an endpoint to save a student's ranked project preferences so the algorithm can use them.",
+      "acceptanceCriteria": [
+        "POST /student/preferences/ accepts an ordered list of project PKs",
+        "Validates that all submitted project PKs belong to the current course",
+        "Validates that at least 3 projects are ranked if more than 3 projects exist; otherwise all projects must be ranked",
+        "Validates that the phase is 'open'; returns 400 if not",
+        "Creates or updates the Preference record for the student's enrollment",
+        "Returns success response (redirect to student view with confirmation message)",
+        "Typecheck passes"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-011",
+      "title": "Preference submission UI",
+      "description": "As a student, I want to rank projects by dragging them into order so the system can assign me my best available choice.",
+      "acceptanceCriteria": [
+        "Student project list page (phase open) includes a ranked list section below the project cards",
+        "Student can drag projects into a ranked order using SortableJS (included via CDN)",
+        "A 'Save Preferences' button submits the ranked order to POST /student/preferences/",
+        "If the student has existing preferences, the ranked list is pre-populated in their saved order",
+        "A success message is shown after saving: 'Your preferences have been saved'",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-012",
+      "title": "Assignment algorithm backend",
+      "description": "As a developer, I need a function that assigns projects to students based on preferences so the professor can trigger it.",
+      "acceptanceCriteria": [
+        "A service function run_assignment(course) implements a greedy algorithm: shuffle students randomly (fixed seed from course.context_id for reproducibility), then for each student assign their highest-ranked available project",
+        "Students with no preferences are left as Unassigned (Assignment.project = None)",
+        "All existing Assignment records for the course are deleted before re-running",
+        "Function returns a dict: {enrollment_id: project_id_or_None}",
+        "Phase transitions to 'assigned' after algorithm completes",
+        "POST /professor/run-assignment/ calls run_assignment(course) and redirects to assignment results page",
+        "Typecheck passes"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-013",
+      "title": "Assignment results UI",
+      "description": "As a professor, I want to see a summary table of assignments so I can review the results before publishing.",
+      "acceptanceCriteria": [
+        "GET /professor/assignments/ shows a table: Student Name | Assigned Project (or 'Unassigned')",
+        "Table is only accessible when phase is 'assigned'",
+        "A 'Re-run Assignment' button at the top POSTs to /professor/run-assignment/ and returns to this page",
+        "A 'Publish Results' button is shown below the table",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-014",
+      "title": "Professor assignment override",
+      "description": "As a professor, I want to manually override a student's assigned project so I can correct edge cases before publishing.",
+      "acceptanceCriteria": [
+        "Each row in the assignment table has an 'Override' button",
+        "Clicking 'Override' shows a dropdown listing all projects not currently assigned to another student, plus 'Unassigned'",
+        "POST /professor/assignments/<enrollment_id>/override/ updates the Assignment record",
+        "The previously assigned project is freed (available for override by other students)",
+        "The assignment table refreshes showing the updated assignment",
+        "Override endpoint returns 403 if phase is not 'assigned'",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-015",
+      "title": "Publish results and AGS grade passback",
+      "description": "As a professor, I want to publish results so students can see their project and the LMS records their grade.",
+      "acceptanceCriteria": [
+        "POST /professor/publish/ transitions phase from 'assigned' to 'published'",
+        "For each student with a non-null Assignment, send a score of 1.0 (out of 1.0) to the LMS via AGS using the course's lineitem_url",
+        "Students with Assignment.project = None receive no AGS call (LMS grade column stays empty)",
+        "If lineitem_url is null, log a warning and skip AGS calls without raising an error",
+        "AGS calls use the LTI access token obtained via django-lti's service client",
+        "After publish, redirect to the professor dashboard showing 'Results Published' status",
+        "Typecheck passes"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-016",
+      "title": "Student published result view",
+      "description": "As a student, I want to see my assigned project after results are published so I know what I will be working on.",
+      "acceptanceCriteria": [
+        "GET /student/result/ (or redirect from /student/ when phase is 'published') shows the student's assigned project",
+        "If the student has an assignment: show project title, description, and tags",
+        "If the student is unassigned: show message 'No project was assigned to you. Please contact your professor.'",
+        "Page is only accessible when phase is 'published'",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 16,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-017",
+      "title": "Docker Compose deployment",
+      "description": "As a system administrator, I want to deploy the app with docker compose up so it runs in a reproducible environment.",
+      "acceptanceCriteria": [
+        "docker-compose.yml defines three services: web (Django + Gunicorn), db (PostgreSQL 15), nginx (reverse proxy)",
+        "Dockerfile for web service: installs requirements, collects static files, runs gunicorn",
+        "nginx.conf proxies / to gunicorn and serves /static/ from the collected static volume",
+        "All secrets (SECRET_KEY, POSTGRES_PASSWORD, ALLOWED_HOSTS) are read from a .env file",
+        "A .env.example file documents all required variables with placeholder values",
+        ".gitignore includes .env",
+        "Web container entrypoint runs 'python manage.py migrate' before starting gunicorn",
+        "Running 'docker compose up' and visiting http://localhost shows a valid Django response (even if LTI launch is needed to access content)",
+        "Typecheck passes"
+      ],
+      "priority": 17,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}
