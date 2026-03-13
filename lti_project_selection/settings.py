@@ -42,6 +42,7 @@ INSTALLED_APPS: list[str] = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "lti_tool",
     "projects",
 ]
 
@@ -113,6 +114,17 @@ USE_TZ: bool = True
 STATIC_URL: str = "/static/"
 STATIC_ROOT: Path = BASE_DIR / "staticfiles"
 STATICFILES_STORAGE: str = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+# ---------------------------------------------------------------------------
+# Cache (used by django-lti for nonce/state storage)
+# ---------------------------------------------------------------------------
+
+CACHES: dict = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "lti_cache",
+    }
+}
 
 # ---------------------------------------------------------------------------
 # Default primary key field type
