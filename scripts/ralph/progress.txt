@@ -5,6 +5,11 @@
 - WhiteNoise is configured for static files (both INSTALLED_APPS and MIDDLEWARE)
 - Templates live in `BASE_DIR / 'templates'`; base.html uses Bootstrap 5.3.3 CDN
 - No type checker (mypy/ty) installed; typecheck = `uv run python -m py_compile <files>` + `manage.py check`
+- django-lti package name is `lti_tool` (not `django_lti`); INSTALLED_APPS entry is `"lti_tool"`
+- LTI "Platform" is called `LtiRegistration` in lti_tool (fields: issuer, client_id, auth_url, token_url, keyset_url)
+- lti_tool uses `DjangoCacheDataStorage` (pylti1p3) → requires CACHES with DatabaseCache; run `createcachetable` after migrate
+- LTI URL pattern: login at `/lti/login/`, launch at `/lti/launch/`, JWKS at `/.well-known/jwks.json`
+- Launch view lives in `projects/lti_views.py`; extends `LtiLaunchBaseView`, implements `handle_resource_launch`
 
 # Ralph Progress Log
 Started: divendres, 13 de març de 2026, 10:28:11 CET
@@ -31,4 +36,19 @@ Started: divendres, 13 de març de 2026, 10:28:11 CET
   - Course.phase uses string choices (setup/open/closed/assigned/published); constants defined on the model class
   - Preference uses OneToOneField to enrollment (one preference set per student per course)
   - Assignment uses OneToOneField to enrollment; project is nullable (None = Unassigned)
+---
+
+## 2026-03-13 - US-003
+- Added `lti_tool` to INSTALLED_APPS in settings.py
+- Added CACHES with DatabaseCache (`lti_cache` table) for nonce/state storage
+- Added LTI URL patterns: OIDC login at `/lti/login/`, launch at `/lti/launch/`, JWKS at `/.well-known/jwks.json`
+- Created `projects/lti_views.py` with `ProjectLtiLaunchView` (placeholder, full handler in US-004)
+- Ran `manage.py migrate` (applied lti_tool migrations) and `manage.py createcachetable`
+- Files changed: lti_project_selection/settings.py, lti_project_selection/urls.py, projects/lti_views.py
+- **Learnings for future iterations:**
+  - The django-lti package registers as `lti_tool` in Python, not `django_lti`
+  - `LtiRegistration` is the "Platform" model — fields are auth_url/token_url/keyset_url (not auth_login_url etc.)
+  - After adding database cache, must run `python manage.py createcachetable` to create the `lti_cache` table
+  - OIDC login view accepts optional `<uuid:registration_uuid>` kwargs — expose both URL patterns
+  - `manage.py check` passes with no issues after this change
 ---
