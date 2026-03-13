@@ -55,6 +55,7 @@ MIDDLEWARE: list[str] = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "projects.middleware.AutoCloseDeadlineMiddleware",
 ]
 
 ROOT_URLCONF: str = "lti_project_selection.urls"
