@@ -1,3 +1,18 @@
+## 2026-03-13 - US-017
+- What was implemented:
+  - `Dockerfile`: python:3.12-slim base, installs libpq-dev/gcc, pip installs requirements.txt, collectstatic, ENTRYPOINT = entrypoint.sh
+  - `entrypoint.sh`: runs `migrate`, `createcachetable` (ignores errors), then starts gunicorn on 0.0.0.0:8000
+  - `docker-compose.yml`: three services — db (postgres:15), web (build: ., env_file: .env), nginx (nginx:1.25, port 80); shared `static_files` volume for collected static
+  - `nginx.conf`: proxies / to gunicorn, serves /static/ from staticfiles volume
+  - `.env.example`: documents SECRET_KEY, DEBUG, ALLOWED_HOSTS, POSTGRES_PASSWORD, DATABASE_URL
+  - `.env` already in `.gitignore`
+- Files changed: Dockerfile, entrypoint.sh, docker-compose.yml, nginx.conf, .env.example
+- **Learnings for future iterations:**
+  - `createcachetable || true` in entrypoint avoids errors on repeated runs when table already exists
+  - Static files shared between web and nginx via named volume `static_files`
+  - `env_file: .env` in compose loads all vars; individual `environment:` entries override specific values (e.g., DATABASE_URL with the db hostname)
+---
+
 ## 2026-03-13 - US-016
 - What was implemented:
   - Updated `student_result` view in `projects/views.py`: phase guard (redirects to student_view if not 'published'), fetches enrollment by lti_sub, fetches Assignment with select_related("project"), passes assignment to template
