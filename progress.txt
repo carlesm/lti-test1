@@ -1,3 +1,13 @@
+## 2026-03-13 - US-016
+- What was implemented:
+  - Updated `student_result` view in `projects/views.py`: phase guard (redirects to student_view if not 'published'), fetches enrollment by lti_sub, fetches Assignment with select_related("project"), passes assignment to template
+  - Rewrote `templates/projects/student_result.html`: shows assigned project card (title, description, tags) or "No project was assigned" alert if unassigned
+- Files changed: projects/views.py, templates/projects/student_result.html
+- **Learnings for future iterations:**
+  - `assignment.project` can be None even when Assignment record exists (unassigned student); check both `assignment` and `assignment.project`
+  - Phase guard in student_result: redirect to student_view if phase != 'published' (handles all other phases gracefully)
+---
+
 ## 2026-03-13 - US-015
 - What was implemented:
   - Added `publish_results(course)` service function in `projects/services.py`: transitions 'assigned' → 'published', calls `_send_ags_grades` if lineitem_url present
