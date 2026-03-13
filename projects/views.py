@@ -1,12 +1,16 @@
 """Views for the projects app."""
 
+from datetime import datetime
+
 from django.http import HttpRequest, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 
 from projects.decorators import lti_required
 from projects.forms import ProjectForm
 from projects.lti_views import INSTRUCTOR_ROLE, LTI_CONTEXT_ID_KEY, LTI_ROLES_KEY
 from projects.models import Course, Project
+from projects import services
 
 
 def _get_instructor_course(request: HttpRequest) -> tuple[Course, HttpResponse | None]:
@@ -108,6 +112,110 @@ def project_delete(request: HttpRequest, project_id: int) -> HttpResponse:
         project.save()
         return redirect("projects:professor_dashboard")
 
+    return redirect("projects:professor_dashboard")
+
+
+def _parse_deadline(value: str) -> datetime | None:
+    """Parse a datetime-local string into an aware datetime, or return None."""
+    if not value:
+        return None
+    try:
+        naive = datetime.strptime(value, "%Y-%m-%dT%H:%M")
+        return timezone.make_aware(naive)
+    except ValueError:
+        return None
+
+
+@lti_required
+def open_selection_view(request: HttpRequest) -> HttpResponse:
+    """POST: transition course setup → open."""
+    course, err = _get_instructor_course(request)
+    if err:
+        return err
+    if request.method == "POST":
+        deadline = _parse_deadline(request.POST.get("deadline", ""))
+        try:
+            services.open_selection(course, deadline=deadline)
+        except ValueError as exc:
+            projects = course.projects.filter(is_deleted=False)
+            return render(
+                request,
+                "projects/professor_dashboard.html",
+                {"course": course, "projects": projects, "error": str(exc)},
+            )
+    return redirect("projects:professor_dashboard")
+
+
+@lti_required
+def close_selection_view(request: HttpRequest) -> HttpResponse:
+    """POST: transition course open → closed."""
+    course, err = _get_instructor_course(request)
+    if err:
+        return err
+    if request.method == "POST":
+        try:
+            services.close_selection(course)
+        except ValueError as exc:
+            projects = course.projects.filter(is_deleted=False)
+            return render(
+                request,
+                "projects/professor_dashboard.html",
+                {"course": course, "projects": projects, "error": str(exc)},
+            )
+    return redirect("projects:professor_dashboard")
+
+
+@lti_required
+def extend_deadline_view(request: HttpRequest) -> HttpResponse:
+    """POST: extend deadline for an open course."""
+    course, err = _get_instructor_course(request)
+    if err:
+        return err
+    if request.method == "POST":
+        deadline = _parse_deadline(request.POST.get("deadline", ""))
+        if deadline is None:
+            projects = course.projects.filter(is_deleted=False)
+            return render(
+                request,
+                "projects/professor_dashboard.html",
+                {"course": course, "projects": projects, "error": "A valid deadline is required."},
+            )
+        try:
+            services.extend_deadline(course, deadline)
+        except ValueError as exc:
+            projects = course.projects.filter(is_deleted=False)
+            return render(
+                request,
+                "projects/professor_dashboard.html",
+                {"course": course, "projects": projects, "error": str(exc)},
+            )
+    return redirect("projects:professor_dashboard")
+
+
+@lti_required
+def assignment_results_view(request: HttpRequest) -> HttpResponse:
+    """Assignment results page — stub; full implementation in US-013."""
+    course, err = _get_instructor_course(request)
+    if err:
+        return err
+    return render(request, "projects/assignment_results.html", {"course": course})
+
+
+@lti_required
+def run_assignment_view(request: HttpRequest) -> HttpResponse:
+    """POST: run assignment algorithm — stub; full implementation in US-012."""
+    course, err = _get_instructor_course(request)
+    if err:
+        return err
+    return redirect("projects:assignment_results")
+
+
+@lti_required
+def publish_results_view(request: HttpRequest) -> HttpResponse:
+    """POST: publish results — stub; full implementation in US-015."""
+    course, err = _get_instructor_course(request)
+    if err:
+        return err
     return redirect("projects:professor_dashboard")
 
 
