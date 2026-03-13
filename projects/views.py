@@ -206,10 +206,12 @@ def assignment_results_view(request: HttpRequest) -> HttpResponse:
 
 @lti_required
 def run_assignment_view(request: HttpRequest) -> HttpResponse:
-    """POST: run assignment algorithm — stub; full implementation in US-012."""
+    """POST: run the assignment algorithm and redirect to assignment results."""
     course, err = _get_instructor_course(request)
     if err:
         return err
+    if request.method == "POST":
+        services.run_assignment(course)
     return redirect("projects:assignment_results")
 
 
