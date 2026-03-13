@@ -1,4 +1,23 @@
 ## Codebase Patterns
+- Service functions in `projects/services.py` raise `ValueError` for invalid phase transitions
+- `AutoCloseDeadlineMiddleware` checks deadline on each request — no Celery needed
+- Always use `update_fields=[...]` in `course.save()` to avoid overwriting concurrent changes
+
+---
+
+## 2026-03-13 - US-007
+- What was implemented:
+  - Created `projects/services.py`: `open_selection`, `close_selection`, `extend_deadline`, `auto_close_if_deadline_passed`
+  - Created `projects/middleware.py`: `AutoCloseDeadlineMiddleware` checks deadline on each request and closes if passed
+  - Updated `lti_project_selection/settings.py`: added `AutoCloseDeadlineMiddleware` to MIDDLEWARE list
+- Files changed: projects/services.py (new), projects/middleware.py (new), lti_project_selection/settings.py
+- **Learnings for future iterations:**
+  - Service functions use ValueError for invalid transitions, not HTTP errors — callers decide how to handle
+  - Middleware swallows exceptions to never block requests; import inside __call__ to avoid circular imports
+  - `update_fields` in save() is important to avoid overwriting concurrent updates to other fields
+---
+
+
 - ProjectForm in `projects/forms.py` is a ModelForm for Project — use `form.save(commit=False)` to set course FK before saving
 - Use `project.is_deleted = True; project.save()` for soft-delete (never hard-delete Project records)
 - `_get_instructor_course(request)` helper in views.py returns (course, None) or (None, error_response) — reuse for all instructor views
