@@ -14,7 +14,16 @@
     </span>
 </div>
 
-<h2 class="h4">Projects</h2>
+{% if error %}
+    <div class="alert alert-danger" role="alert">{{ error }}</div>
+{% endif %}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <h2 class="h4 mb-0">Projects</h2>
+    {% if course.phase == 'setup' %}
+        <a href="{% url 'projects:project_create' %}" class="btn btn-primary btn-sm">+ Add Project</a>
+    {% endif %}
+</div>
 
 {% if projects %}
     <div class="row row-cols-1 row-cols-md-2 g-4">
@@ -32,6 +41,15 @@
                         </p>
                     {% endif %}
                 </div>
+                {% if course.phase == 'setup' %}
+                <div class="card-footer d-flex gap-2">
+                    <a href="{% url 'projects:project_edit' project.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                    <form method="post" action="{% url 'projects:project_delete' project.pk %}" onsubmit="return confirm('Delete this project?')">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                    </form>
+                </div>
+                {% endif %}
             </div>
         </div>
         {% endfor %}
