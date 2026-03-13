@@ -265,10 +265,20 @@ def run_assignment_view(request: HttpRequest) -> HttpResponse:
 
 @lti_required
 def publish_results_view(request: HttpRequest) -> HttpResponse:
-    """POST: publish results — stub; full implementation in US-015."""
+    """POST: publish results and send AGS grade passback."""
     course, err = _get_instructor_course(request)
     if err:
         return err
+    if request.method == "POST":
+        try:
+            services.publish_results(course)
+        except ValueError as exc:
+            projects = course.projects.filter(is_deleted=False)
+            return render(
+                request,
+                "projects/professor_dashboard.html",
+                {"course": course, "projects": projects, "error": str(exc)},
+            )
     return redirect("projects:professor_dashboard")
 
 
