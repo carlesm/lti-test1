@@ -1,3 +1,14 @@
+## 2026-03-13 - US-012
+- What was implemented:
+  - Added `run_assignment(course)` service function in `projects/services.py`: greedy algorithm with deterministic shuffle seeded from `hashlib.md5(course.context_id)`, assigns highest-ranked available project per student, creates Assignment records, transitions phase to 'assigned'
+  - Updated `run_assignment_view` in `projects/views.py`: calls `services.run_assignment(course)` on POST and redirects to assignment results
+- Files changed: projects/services.py, projects/views.py
+- **Learnings for future iterations:**
+  - Seed pattern: `int(hashlib.md5(course.context_id.encode()).hexdigest(), 16) % (2**32)` then `random.Random(seed).shuffle(list)`
+  - `Assignment.objects.filter(enrollment__in=enrollments)` efficiently deletes only this course's records
+  - `Assignment.objects.create(enrollment=enrollment, project_id=assigned_project)` — use `project_id` (FK column) to set null or int directly
+---
+
 ## 2026-03-13 - US-011
 - What was implemented:
   - Added `{% block extra_scripts %}{% endblock %}` to `templates/base.html` before `</body>` for page-specific JS
