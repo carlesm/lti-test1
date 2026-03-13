@@ -8,8 +8,8 @@ from django.utils import timezone
 
 from projects.decorators import lti_required
 from projects.forms import ProjectForm
-from projects.lti_views import INSTRUCTOR_ROLE, LTI_CONTEXT_ID_KEY, LTI_ROLES_KEY
-from projects.models import Course, Project
+from projects.lti_views import INSTRUCTOR_ROLE, LEARNER_ROLE, LTI_CONTEXT_ID_KEY, LTI_ROLES_KEY, LTI_SUB_KEY
+from projects.models import Assignment, Course, Project, StudentEnrollment
 from projects import services
 
 
@@ -221,5 +221,60 @@ def publish_results_view(request: HttpRequest) -> HttpResponse:
 
 @lti_required
 def student_view(request: HttpRequest) -> HttpResponse:
-    """Student project list view — placeholder; full implementation in US-009."""
-    return render(request, "projects/student_view.html")
+    """Student project list view."""
+    roles = request.session.get(LTI_ROLES_KEY, [])
+    if LEARNER_ROLE not in roles:
+        return HttpResponseForbidden("Learner role required.")
+
+    context_id = request.session[LTI_CONTEXT_ID_KEY]
+    course = Course.objects.get(context_id=context_id)
+
+    # Auto-close if deadline passed
+    # (middleware already handles this, but refresh from DB)
+    course.refresh_from_db()
+
+    if course.phase == Course.PHASE_PUBLISHED:
+        return redirect("projects:student_result")
+
+    if course.phase in (Course.PHASE_SETUP, Course.PHASE_CLOSED):
+        return render(
+            request,
+            "projects/student_view.html",
+            {"course": course, "message": "Selection is not open yet."},
+        )
+
+    if course.phase == Course.PHASE_ASSIGNED:
+        return render(
+            request,
+            "projects/student_view.html",
+            {"course": course, "message": "Assignments are being finalized."},
+        )
+
+    # Phase is OPEN — show project cards with Taken/Available status
+    projects = course.projects.filter(is_deleted=False)
+    assigned_project_ids = set(
+        Assignment.objects.filter(enrollment__course=course, project__isnull=False)
+        .values_list("project_id", flat=True)
+    )
+
+    projects_with_status = [
+        {"project": p, "taken": p.pk in assigned_project_ids}
+        for p in projects
+    ]
+
+    return render(
+        request,
+        "projects/student_view.html",
+        {"course": course, "projects_with_status": projects_with_status},
+    )
+
+
+@lti_required
+def student_result(request: HttpRequest) -> HttpResponse:
+    """Student result view — stub; full implementation in US-016."""
+    roles = request.session.get(LTI_ROLES_KEY, [])
+    if LEARNER_ROLE not in roles:
+        return HttpResponseForbidden("Learner role required.")
+    context_id = request.session[LTI_CONTEXT_ID_KEY]
+    course = Course.objects.get(context_id=context_id)
+    return render(request, "projects/student_result.html", {"course": course})

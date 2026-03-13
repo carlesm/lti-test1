@@ -1,6 +1,46 @@
 {% extends "base.html" %}
-{% block title %}Student View{% endblock %}
+{% block title %}Student Project List{% endblock %}
 {% block content %}
-<h1>Student Project List</h1>
-<p class="text-muted">Full project list coming in US-009.</p>
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1>{{ course.title }}</h1>
+  <span class="badge
+    {% if course.phase == 'setup' %}bg-secondary
+    {% elif course.phase == 'open' %}bg-success
+    {% elif course.phase == 'closed' %}bg-warning text-dark
+    {% elif course.phase == 'assigned' %}bg-info text-dark
+    {% elif course.phase == 'published' %}bg-primary
+    {% endif %}
+    fs-6">{{ course.get_phase_display }}</span>
+</div>
+
+{% if message %}
+  <div class="alert alert-info">{{ message }}</div>
+{% endif %}
+
+{% if projects_with_status %}
+  <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+    {% for item in projects_with_status %}
+      <div class="col">
+        <div class="card h-100 {% if item.taken %}border-secondary{% endif %}">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <h5 class="card-title mb-0">{{ item.project.title }}</h5>
+              {% if item.taken %}
+                <span class="badge bg-secondary ms-2">Taken</span>
+              {% else %}
+                <span class="badge bg-success ms-2">Available</span>
+              {% endif %}
+            </div>
+            <p class="card-text">{{ item.project.description }}</p>
+            {% if item.project.tags %}
+              <p class="card-text"><small class="text-muted">{{ item.project.tags }}</small></p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% elif not message %}
+  <p class="text-muted">No projects are available.</p>
+{% endif %}
 {% endblock %}
