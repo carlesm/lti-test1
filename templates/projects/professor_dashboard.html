@@ -1,6 +1,44 @@
 {% extends "base.html" %}
-{% block title %}Professor Dashboard{% endblock %}
+{% block title %}Professor Dashboard — {{ course.title }}{% endblock %}
 {% block content %}
-<h1>Professor Dashboard</h1>
-<p class="text-muted">Full dashboard coming in US-005.</p>
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <h1 class="mb-0">{{ course.title }}</h1>
+    <span class="badge fs-6
+        {% if course.phase == 'setup' %}bg-secondary
+        {% elif course.phase == 'open' %}bg-success
+        {% elif course.phase == 'closed' %}bg-warning text-dark
+        {% elif course.phase == 'assigned' %}bg-info text-dark
+        {% elif course.phase == 'published' %}bg-primary
+        {% endif %}">
+        {{ course.get_phase_display }}
+    </span>
+</div>
+
+<h2 class="h4">Projects</h2>
+
+{% if projects %}
+    <div class="row row-cols-1 row-cols-md-2 g-4">
+        {% for project in projects %}
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">{{ project.title }}</h5>
+                    <p class="card-text">{{ project.description }}</p>
+                    {% if project.tags %}
+                        <p class="card-text">
+                            {% for tag in project.tags.split %}
+                                <span class="badge bg-light text-dark border">{{ tag }}</span>
+                            {% endfor %}
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="alert alert-info" role="alert">
+        No projects have been added yet.
+    </div>
+{% endif %}
 {% endblock %}
