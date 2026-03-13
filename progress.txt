@@ -1,3 +1,13 @@
+## 2026-03-13 - US-013
+- What was implemented:
+  - Updated `assignment_results_view` in `projects/views.py`: guards phase == 'assigned' (redirects to dashboard otherwise), fetches all Assignment records with select_related, orders by enrollment__name
+  - Rewrote `templates/projects/assignment_results.html`: Re-run Assignment button (POST to run-assignment), table with Student Name | Assigned Project (or 'Unassigned'), Publish Results button (POST to publish)
+- Files changed: projects/views.py, templates/projects/assignment_results.html
+- **Learnings for future iterations:**
+  - `Assignment.objects.filter(enrollment__course=course).select_related("enrollment", "project")` gives efficient access to student name and project title
+  - Phase guard in assignment_results_view: redirect to dashboard if phase != 'assigned'
+---
+
 ## 2026-03-13 - US-012
 - What was implemented:
   - Added `run_assignment(course)` service function in `projects/services.py`: greedy algorithm with deterministic shuffle seeded from `hashlib.md5(course.context_id)`, assigns highest-ranked available project per student, creates Assignment records, transitions phase to 'assigned'
