@@ -2,4 +2,10 @@
 
 from django.contrib import admin
 
-# Register your models here as they are created.
+from projects.models import Assignment, Course, Preference, Project, StudentEnrollment
+
+admin.site.register(Course)
+admin.site.register(Project)
+admin.site.register(StudentEnrollment)
+admin.site.register(Preference)
+admin.site.register(Assignment)
