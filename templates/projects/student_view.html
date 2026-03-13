@@ -18,7 +18,7 @@
 {% endif %}
 
 {% if projects_with_status %}
-  <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+  <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 mb-5">
     {% for item in projects_with_status %}
       <div class="col">
         <div class="card h-100 {% if item.taken %}border-secondary{% endif %}">
@@ -40,7 +40,61 @@
       </div>
     {% endfor %}
   </div>
+
+  <div class="card mb-4">
+    <div class="card-header">
+      <h4 class="mb-0">Rank Your Projects</h4>
+      <small class="text-muted">Drag projects into your preferred order, then save.</small>
+    </div>
+    <div class="card-body">
+      <ul id="sortable-list" class="list-group mb-3">
+        {% for project in ranked_projects %}
+          <li class="list-group-item d-flex align-items-center" data-id="{{ project.pk }}">
+            <span class="me-2 text-muted" style="cursor:grab;">&#9776;</span>
+            <span>{{ project.title }}</span>
+          </li>
+        {% endfor %}
+        {% for project in unranked_projects %}
+          <li class="list-group-item d-flex align-items-center" data-id="{{ project.pk }}">
+            <span class="me-2 text-muted" style="cursor:grab;">&#9776;</span>
+            <span>{{ project.title }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+
+      <form id="preferences-form" method="post" action="{% url 'projects:submit_preferences' %}">
+        {% csrf_token %}
+        <div id="hidden-inputs"></div>
+        <button type="submit" class="btn btn-primary">Save Preferences</button>
+      </form>
+    </div>
+  </div>
 {% elif not message %}
   <p class="text-muted">No projects are available.</p>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+{% if projects_with_status %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<script>
+  var sortable = Sortable.create(document.getElementById('sortable-list'), {
+    animation: 150,
+    handle: 'li',
+  });
+
+  document.getElementById('preferences-form').addEventListener('submit', function(e) {
+    var container = document.getElementById('hidden-inputs');
+    container.innerHTML = '';
+    var items = document.querySelectorAll('#sortable-list li');
+    items.forEach(function(item) {
+      var input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'project_ids';
+      input.value = item.getAttribute('data-id');
+      container.appendChild(input);
+    });
+  });
+</script>
 {% endif %}
 {% endblock %}

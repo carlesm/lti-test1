@@ -254,7 +254,10 @@ def student_view(request: HttpRequest) -> HttpResponse:
         )
 
     # Phase is OPEN — show project cards with Taken/Available status
-    projects = course.projects.filter(is_deleted=False)
+    lti_sub = request.session[LTI_SUB_KEY]
+    enrollment = get_object_or_404(StudentEnrollment, course=course, lti_sub=lti_sub)
+
+    projects = list(course.projects.filter(is_deleted=False))
     assigned_project_ids = set(
         Assignment.objects.filter(enrollment__course=course, project__isnull=False)
         .values_list("project_id", flat=True)
@@ -265,10 +268,25 @@ def student_view(request: HttpRequest) -> HttpResponse:
         for p in projects
     ]
 
+    # Build the ranked list pre-populated with existing preferences
+    try:
+        existing_pref_ids: list[int] = list(enrollment.preference.ordered_project_ids)
+    except Preference.DoesNotExist:
+        existing_pref_ids = []
+
+    project_map = {p.pk: p for p in projects}
+    ranked_projects = [project_map[pk] for pk in existing_pref_ids if pk in project_map]
+    unranked_projects = [p for p in projects if p.pk not in set(existing_pref_ids)]
+
     return render(
         request,
         "projects/student_view.html",
-        {"course": course, "projects_with_status": projects_with_status},
+        {
+            "course": course,
+            "projects_with_status": projects_with_status,
+            "ranked_projects": ranked_projects,
+            "unranked_projects": unranked_projects,
+        },
     )
 
 
