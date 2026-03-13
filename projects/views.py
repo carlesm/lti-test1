@@ -6,10 +6,13 @@ from django.http import HttpRequest, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
+from django.http import HttpResponseBadRequest
+from django.contrib import messages
+
 from projects.decorators import lti_required
 from projects.forms import ProjectForm
 from projects.lti_views import INSTRUCTOR_ROLE, LEARNER_ROLE, LTI_CONTEXT_ID_KEY, LTI_ROLES_KEY, LTI_SUB_KEY
-from projects.models import Assignment, Course, Project, StudentEnrollment
+from projects.models import Assignment, Course, Preference, Project, StudentEnrollment
 from projects import services
 
 
@@ -267,6 +270,58 @@ def student_view(request: HttpRequest) -> HttpResponse:
         "projects/student_view.html",
         {"course": course, "projects_with_status": projects_with_status},
     )
+
+
+@lti_required
+def submit_preferences(request: HttpRequest) -> HttpResponse:
+    """POST: save ranked project preferences for a student."""
+    roles = request.session.get(LTI_ROLES_KEY, [])
+    if LEARNER_ROLE not in roles:
+        return HttpResponseForbidden("Learner role required.")
+
+    context_id = request.session[LTI_CONTEXT_ID_KEY]
+    course = Course.objects.get(context_id=context_id)
+    course.refresh_from_db()
+
+    if course.phase != Course.PHASE_OPEN:
+        return HttpResponseBadRequest("Selection is not open.")
+
+    if request.method != "POST":
+        return redirect("projects:student_view")
+
+    # Parse submitted project PKs (ordered list from form)
+    project_ids_raw = request.POST.getlist("project_ids")
+    try:
+        project_ids = [int(pk) for pk in project_ids_raw]
+    except (ValueError, TypeError):
+        return HttpResponseBadRequest("Invalid project IDs.")
+
+    # Validate all PKs belong to current course
+    valid_ids = set(course.projects.filter(is_deleted=False).values_list("pk", flat=True))
+    if not all(pk in valid_ids for pk in project_ids):
+        return HttpResponseBadRequest("Some projects do not belong to this course.")
+
+    # Validate ranking count
+    total_projects = len(valid_ids)
+    if total_projects > 3:
+        if len(project_ids) < 3:
+            return HttpResponseBadRequest("You must rank at least 3 projects.")
+    else:
+        if len(project_ids) < total_projects:
+            return HttpResponseBadRequest("You must rank all projects.")
+
+    # Get enrollment
+    lti_sub = request.session[LTI_SUB_KEY]
+    enrollment = get_object_or_404(StudentEnrollment, course=course, lti_sub=lti_sub)
+
+    # Create or update preference
+    Preference.objects.update_or_create(
+        enrollment=enrollment,
+        defaults={"ordered_project_ids": project_ids},
+    )
+
+    messages.success(request, "Your preferences have been saved.")
+    return redirect("projects:student_view")
 
 
 @lti_required

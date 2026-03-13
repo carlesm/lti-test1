@@ -18,5 +18,6 @@ urlpatterns = [
     path("professor/assignments/", views.assignment_results_view, name="assignment_results"),
     path("professor/publish/", views.publish_results_view, name="publish_results"),
     path("student/", views.student_view, name="student_view"),
+    path("student/preferences/", views.submit_preferences, name="submit_preferences"),
     path("student/result/", views.student_result, name="student_result"),
 ]
