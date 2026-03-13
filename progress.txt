@@ -1,4 +1,8 @@
 ## Codebase Patterns
+- ProjectForm in `projects/forms.py` is a ModelForm for Project — use `form.save(commit=False)` to set course FK before saving
+- Use `project.is_deleted = True; project.save()` for soft-delete (never hard-delete Project records)
+- `_get_instructor_course(request)` helper in views.py returns (course, None) or (None, error_response) — reuse for all instructor views
+- Delete is only allowed when `course.phase == Course.PHASE_SETUP`; return dashboard with `error` context var if not
 - LTI role URIs come from `lti_tool.lti_core.constants.ContextRole` enum (e.g., `ContextRole.INSTRUCTOR.value`)
 - Session keys for LTI data are defined in `projects/lti_views.py` as module-level constants (LTI_SUB_KEY, etc.)
 - `lti_launch.ags_claim` returns the AGS endpoint dict; `lineitem` key holds the specific line item URL
@@ -7,6 +11,21 @@
 - The lti_required decorator checks for LTI_CONTEXT_ID_KEY in session to verify a valid LTI session
 - URL namespacing: app_name="projects" in urls.py; use `projects:view_name` for reversal
 
+---
+
+## 2026-03-13 - US-006
+- What was implemented:
+  - Created `projects/forms.py`: `ProjectForm` (ModelForm for title, description, tags with Bootstrap widget attrs)
+  - Updated `projects/views.py`: added `project_create`, `project_edit`, `project_delete` views + `_get_instructor_course` helper
+  - Updated `projects/urls.py`: added URL patterns for create/edit/delete
+  - Created `templates/projects/project_form.html`: shared form template for create and edit
+  - Updated `templates/projects/professor_dashboard.html`: "+ Add Project" button (setup phase only), Edit/Delete buttons per card, error alert for delete-blocked messages
+- Files changed: projects/forms.py (new), projects/views.py, projects/urls.py, templates/projects/professor_dashboard.html, templates/projects/project_form.html (new)
+- **Learnings for future iterations:**
+  - Soft delete pattern: set `is_deleted=True` rather than `project.delete()`
+  - Phase guard for delete: check `course.phase != Course.PHASE_SETUP` and return dashboard with `error` context variable
+  - Edit/Delete buttons only shown in template when `course.phase == 'setup'`
+  - `_get_instructor_course` helper pattern avoids repeating role check + Course fetch in every instructor view
 ---
 
 ## 2026-03-13 - US-005
