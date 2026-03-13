@@ -1,3 +1,29 @@
+## 2026-03-13 - US-015
+- What was implemented:
+  - Added `publish_results(course)` service function in `projects/services.py`: transitions 'assigned' → 'published', calls `_send_ags_grades` if lineitem_url present
+  - `_send_ags_grades`: lazy-imports `pylti1p3` + `lti_tool`; looks up `LtiContext` by `id_on_platform=course.context_id`; builds `ServiceConnector` + `AssignmentsGradesService`; sends `Grade(score_given=1.0, score_maximum=1.0)` for each assigned student (skips unassigned); logs warnings on any failure without raising
+  - Updated `publish_results_view` in `projects/views.py`: calls `services.publish_results(course)` on POST with error handling, redirects to dashboard
+- Files changed: projects/services.py, projects/views.py
+- **Learnings for future iterations:**
+  - AGS path: `LtiContext.objects.filter(id_on_platform=course.context_id).first()` → `.deployment.registration.to_registration()` → `ServiceConnector(reg)` → `AssignmentsGradesService(connector, {"scope": [...], "lineitem": url})`
+  - Scope for score submission: `"https://purl.imsglobal.org/spec/lti-ags/scope/score"`
+  - Grade fields: `set_grading_progress("FullyGraded")`, `set_activity_progress("Completed")`, `set_timestamp("YYYY-MM-DDTHH:MM:SSZ")`
+  - All AGS errors are logged as warnings (never propagated); lineitem_url null also logs warning and skips
+---
+
+## 2026-03-13 - US-014
+- What was implemented:
+  - Updated `assignment_results_view` in `projects/views.py`: pre-computes per-row `available_projects` (all course projects minus those assigned to *other* students), passes `assignments_data` list of dicts to template
+  - Added `override_assignment_view` in `projects/views.py`: returns 403 if phase != 'assigned', updates Assignment.project and saves with update_fields, redirects to assignment_results
+  - Added URL pattern `professor/assignments/<int:enrollment_id>/override/` in `projects/urls.py`
+  - Rewrote `templates/projects/assignment_results.html`: each row has an Override button (Bootstrap collapse toggle); collapse row shows a select dropdown with "Unassigned" + available projects, POSTs to override endpoint
+- Files changed: projects/views.py, projects/urls.py, templates/projects/assignment_results.html
+- **Learnings for future iterations:**
+  - Per-row available projects: `all_assigned_ids - ({a.project_id} if a.project_id else set())` gives "taken by others" for each row
+  - Bootstrap collapse per row: use `data-bs-target="#override-{{ enrollment.pk }}"` with unique IDs; the collapse row uses `class="collapse"`
+  - `assignment.save(update_fields=["project"])` avoids overwriting other fields
+---
+
 ## 2026-03-13 - US-013
 - What was implemented:
   - Updated `assignment_results_view` in `projects/views.py`: guards phase == 'assigned' (redirects to dashboard otherwise), fetches all Assignment records with select_related, orders by enrollment__name
