@@ -1,0 +1,25 @@
+## Codebase Patterns
+- LTI role URIs come from `lti_tool.lti_core.constants.ContextRole` enum (e.g., `ContextRole.INSTRUCTOR.value`)
+- Session keys for LTI data are defined in `projects/lti_views.py` as module-level constants (LTI_SUB_KEY, etc.)
+- `lti_launch.ags_claim` returns the AGS endpoint dict; `lineitem` key holds the specific line item URL
+- `lti_launch.context_claim` returns dict with `id` and `title` keys
+- `lti_launch.roles_claim` returns a list of role URI strings
+- The lti_required decorator checks for LTI_CONTEXT_ID_KEY in session to verify a valid LTI session
+- URL namespacing: app_name="projects" in urls.py; use `projects:view_name` for reversal
+
+---
+
+## 2026-03-13 - US-004
+- What was implemented:
+  - Updated `projects/lti_views.py`: full `handle_resource_launch` implementation — extracts sub, name, roles, context_id, context_title, lineitem_url from LTI claims; stores in Django session; creates/updates Course; creates StudentEnrollment for Learners; redirects to professor or student view
+  - Created `projects/decorators.py`: `lti_required` function decorator — returns 403 if `lti_context_id` not in session
+  - Updated `projects/views.py`: stub `professor_dashboard` and `student_view` views using `@lti_required`
+  - Updated `projects/urls.py`: added URL patterns for professor/ and student/ with app_name="projects"
+  - Created `templates/projects/professor_dashboard.html` and `templates/projects/student_view.html` (stubs)
+- Files changed: projects/lti_views.py, projects/decorators.py, projects/views.py, projects/urls.py, templates/projects/professor_dashboard.html, templates/projects/student_view.html
+- **Learnings for future iterations:**
+  - `lti_launch.ags_claim` dict may have `lineitem` (specific) or `lineitems` (collection) keys; use `.get("lineitem")` for the Course lineitem_url
+  - LTI role check: compare role URI strings against `ContextRole.INSTRUCTOR.value` / `ContextRole.LEARNER.value`
+  - No typecheck tools (mypy/ruff/pyright/ty) are installed in the venv; quality check is `python manage.py check` + `py_compile`
+  - Stub views/templates are needed for redirect targets even if full implementation is in a later story
+---
